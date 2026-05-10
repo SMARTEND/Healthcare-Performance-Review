@@ -1,0 +1,63 @@
+# ---------------------------------------------------------
+# Healthcare Performance Review — .gitignore
+# ---------------------------------------------------------
+
+# ----- Python -----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# ----- Power BI -----
+*.pbix.bak
+*.pbit.bak
+*.tmp
+*PowerBIDesktopTemp*
+
+# ----- Excel & Office lock files -----
+~$*
+*.xlsx#
+*.xlsm#
+.~lock.*
+
+# ----- OS metadata -----
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ----- Editor / IDE -----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ----- Build & distribution artifacts -----
+build/
+dist/
+*.egg
+
+# ----- Logs & local data dumps -----
+*.log
+*.tmp
+*.bak
+
+# ----- Sensitive / local config -----
+.env
+.env.local
+secrets.json
+config.local.json
+
+# ----- Large local extracts (uncomment if needed) -----
+# data/raw/
+# data/large_exports/
