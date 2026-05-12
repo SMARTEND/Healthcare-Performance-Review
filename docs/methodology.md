@@ -1,26 +1,25 @@
 # Methodology
 
-End-to-end pipeline used to transform 55,500 raw patient records into an executive Power BI dashboard.
+End-to-end pipeline used to transform 55,500 raw patient records into an executive Power BI dashboard, a live Streamlit web app, and a PDF chart report.
 
 ## Pipeline Overview
 
-```
+```text
 Raw CSV (55,500 rows, 15 columns)
     │
-    ├──► [SQL] Clean, deduplicate, aggregate
-    │
-    ▼
-Analytical Dataset
-    │
-    ├──► [Python] Profile, statistical tests, segment
-    │
-    ▼
-Validated Insights + 9 Charts (PNG)
-    │
-    ├──► [Power BI] Star-schema model, DAX, visualize
-    │
-    ▼
-Interactive Executive Dashboard (.pbix)
+    └──► [SQL] Clean, deduplicate, aggregate
+         │
+         └──► [Python] Profile, statistical tests, segment, generate charts
+              │
+              ├──► [Streamlit + Plotly] Live interactive dashboard
+              │         streamlit run python/dashboard.py
+              │
+              ├──► [PDF Export] Combined chart report
+              │         python python/export_dashboard.py
+              │         Output: reports/healthcare_dashboard_report.pdf
+              │
+              └──► [Power BI] Star-schema model, DAX, visualize
+                        powerbi/healthcare_dashboard.pbix
 ```
 
 ---
@@ -32,6 +31,7 @@ Interactive Executive Dashboard (.pbix)
 **Goal:** Produce a clean, analysis-ready dataset.
 
 **Operations:**
+
 - Standardized name capitalization with `UPPER()` / `LOWER()` / string functions
 - Removed duplicate records using `ROW_NUMBER()` window function partitioned by patient identifier
 - Computed `LOS_Days` via `DATEDIFF(Date_of_Admission, Discharge_Date)`
@@ -51,22 +51,26 @@ Interactive Executive Dashboard (.pbix)
 **Operations:**
 
 ### Profiling
+
 - Row counts, null distributions, date ranges, min/max for all numeric columns
 - Distribution analysis for categorical fields (medical condition, gender, blood type, etc.)
 - Outlier detection on billing amounts (negative values flagged)
 
 ### Statistical Tests
+
 - **Chi-square test of independence** on condition × admission type cross-tabs (no significant association found — confirms uniform synthetic distribution)
 - **Two-proportion z-test** on subsegment differences (e.g., test result rates by condition)
 - **Correlation analysis** between age, LOS, and billing
 
 ### Segmentation
+
 - 5 age bands: 18–34, 35–49, 50–64, 65–79, 80+
 - 6 medical conditions: Arthritis, Asthma, Cancer, Diabetes, Hypertension, Obesity
 - 5 insurance providers: Cigna, Medicare, Blue Cross, UnitedHealthcare, Aetna
 - 3 admission types: Elective, Urgent, Emergency
 
 ### Visualization
+
 - Generated 9 PNG charts at 300 DPI using consistent dashboard-aligned blue palette
 - Each chart paired with insight-driven title (not just topic title)
 - All charts include source-disclosure footer
@@ -75,18 +79,49 @@ Interactive Executive Dashboard (.pbix)
 
 ---
 
-## Stage 3 — Power BI Dashboard
+## Stage 3 — Streamlit Interactive Dashboard
+
+**Tool:** Streamlit 1.35+ with Plotly
+
+**Goal:** Provide a shareable, filter-driven web dashboard that runs locally without Power BI.
+
+**Features:**
+
+- Sidebar filters: Year, Medical Condition, Insurance Provider, Admission Type
+- 5 KPI metric cards: Admissions, Net Revenue, Avg Billing, Avg LOS, Refund Rate
+- 8 interactive Plotly charts mirroring the Power BI pages
+- Collapsible raw data explorer
+
+**Run:** `streamlit run python/dashboard.py`
+
+---
+
+## Stage 4 — PDF Report Export
+
+**Tool:** Matplotlib `PdfPages`
+
+**Goal:** Package all 9 charts into a single paginated PDF for offline distribution.
+
+**Output:** `reports/healthcare_dashboard_report.pdf` (cover page + 9 chart pages).
+
+**Run:** `python python/export_dashboard.py`
+
+---
+
+## Stage 5 — Power BI Dashboard
 
 **Tool:** Power BI Desktop with DAX
 
 **Goal:** Build an interactive 4-page executive dashboard.
 
 **Data Model:**
+
 - Star schema: 1 fact table (`Patients`) + 1 dimension (`Date`)
 - `Date` table marked as Date Table for time-intelligence support
 - Active relationship: `Patients[Date of Admission]` ↔ `Date[Date]`
 
 **DAX Categories Used:**
+
 - Aggregation: `COUNTROWS`, `SUM`, `AVERAGE`, `MEDIAN`, `DISTINCTCOUNT`
 - Filter context: `CALCULATE`, `FILTER`
 - Time intelligence: `SAMEPERIODLASTYEAR`, `TOTALYTD`
@@ -97,12 +132,14 @@ Interactive Executive Dashboard (.pbix)
 See [`powerbi/dax_measures.md`](../powerbi/dax_measures.md) for all measures.
 
 **Pages:**
+
 1. **Consolidated View** — KPI hero cards + clinical/operational/financial metrics
 2. **Monthly View** — Time-series trends with YoY comparisons
 3. **Patient Details** — Drill-through page filterable by patient cohort
 4. **Key Takeaways** — Executive summary of insights and recommended actions
 
 **Interactive Elements:**
+
 - Date range slicer (top-right)
 - Page navigation buttons (left rail)
 - Cross-filtering between visuals
@@ -122,10 +159,10 @@ To reproduce from scratch:
 ```bash
 git clone https://github.com/SMARTEND/Healthcare-Performance-Review.git
 cd Healthcare-Performance-Review
-pip install pandas numpy matplotlib seaborn scipy
+pip install -r requirements.txt
 python python/profile_kaggle.py
 python python/generate_charts.py
-# Then open powerbi/healthcare_dashboard.pbix
+streamlit run python/dashboard.py
 ```
 
 ---

@@ -61,6 +61,9 @@ config.local.json
 # ----- Generated reports -----
 reports/
 
+# ----- Dataset CSV (download from Kaggle — too large for git) -----
+data/healthcare_dataset.csv
+
 # ----- Large local extracts (uncomment if needed) -----
 # data/raw/
 # data/large_exports/

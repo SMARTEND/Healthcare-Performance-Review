@@ -28,6 +28,31 @@ ACCENT_AMB = "#ED7D31"
 GRAY       = "#7F7F7F"
 BLUE_SEQ   = [BLUE_DARK, BLUE_MID, BLUE_LIGHT, "#5B9BD5", "#BDD7EE"]
 
+# Categorical palette — one distinct color per segment
+PALETTE_CAT = ["#2E75B6", "#ED7D31", "#70AD47", "#7030A0", "#C00000", "#00B0F0"]
+
+AGE_COLOR_MAP = {
+    "18–34": "#2E75B6",
+    "35–49": "#ED7D31",
+    "50–64": "#70AD47",
+    "65–79": "#7030A0",
+    "80+":   "#C00000",
+}
+
+INS_COLOR_MAP = {
+    "Aetna":            "#2E75B6",
+    "Blue Cross":       "#ED7D31",
+    "Cigna":            "#70AD47",
+    "Medicare":         "#7030A0",
+    "UnitedHealthcare": "#C00000",
+}
+
+ADM_COLOR_MAP = {
+    "Elective":  "#2E75B6",
+    "Urgent":    "#ED7D31",
+    "Emergency": "#C00000",
+}
+
 DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "healthcare_dataset.csv")
 
 # ----------------------------------------------------------------------
@@ -129,10 +154,14 @@ col1, col2 = st.columns(2)
 with col1:
     st.subheader("Annual Admissions")
     yearly = df.groupby("Year").size().reset_index(name="Admissions")
+    yearly["Color"] = yearly["Year"].apply(
+        lambda y: BLUE_LIGHT if y in (yearly["Year"].min(), yearly["Year"].max()) else BLUE_MID
+    )
     fig = px.bar(
         yearly, x="Year", y="Admissions",
         text="Admissions",
-        color_discrete_sequence=[BLUE_MID],
+        color="Year",
+        color_discrete_sequence=PALETTE_CAT,
     )
     fig.update_traces(texttemplate="%{text:,}", textposition="outside")
     fig.update_layout(showlegend=False, margin=dict(t=20, b=20))
@@ -183,7 +212,8 @@ with col4:
     fig = px.bar(
         age_counts, x="Age Group", y="Patients",
         text="Patients",
-        color_discrete_sequence=[BLUE_MID],
+        color="Age Group",
+        color_discrete_map=AGE_COLOR_MAP,
     )
     fig.update_traces(texttemplate="%{text:,}", textposition="outside")
     fig.update_layout(showlegend=False, margin=dict(t=20, b=20))
@@ -206,7 +236,8 @@ with col5:
     fig = px.bar(
         ins, x="Revenue ($M)", y="Insurance Provider",
         orientation="h", text="Revenue ($M)",
-        color_discrete_sequence=[BLUE_MID],
+        color="Insurance Provider",
+        color_discrete_map=INS_COLOR_MAP,
     )
     fig.update_traces(texttemplate="$%{text:.1f}M", textposition="outside")
     fig.update_layout(showlegend=False, margin=dict(t=20, b=20))
@@ -219,7 +250,8 @@ with col6:
     fig = px.pie(
         adm, names="Admission Type", values="Count",
         hole=0.4,
-        color_discrete_sequence=BLUE_SEQ,
+        color="Admission Type",
+        color_discrete_map=ADM_COLOR_MAP,
     )
     fig.update_traces(textinfo="percent+label")
     fig.update_layout(showlegend=False, margin=dict(t=20, b=20))
@@ -277,12 +309,15 @@ with col8:
     ins_sorted["Revenue ($M)"] = ins_sorted["Billing Amount"] / 1e6
     ins_sorted["Cumulative %"] = ins_sorted["Billing Amount"].cumsum() / ins_sorted["Billing Amount"].sum() * 100
 
+    pareto_bar_colors = [INS_COLOR_MAP.get(p, BLUE_MID)
+                         for p in ins_sorted["Insurance Provider"]]
+
     fig = go.Figure()
     fig.add_bar(
         x=ins_sorted["Insurance Provider"],
         y=ins_sorted["Revenue ($M)"],
         name="Revenue ($M)",
-        marker_color=BLUE_MID,
+        marker_color=pareto_bar_colors,
         yaxis="y1",
     )
     fig.add_scatter(

@@ -1,17 +1,18 @@
 # Healthcare Performance Review
 
 [![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?logo=streamlit&logoColor=white)](python/dashboard.py)
 [![Power BI](https://img.shields.io/badge/Power%20BI-Desktop-F2C811?logo=powerbi&logoColor=black)](https://powerbi.microsoft.com/)
-[![SQL](https://img.shields.io/badge/SQL-T--SQL-CC2927?logo=microsoftsqlserver&logoColor=white)](#)
+[![SQL](https://img.shields.io/badge/SQL-T--SQL-CC2927?logo=microsoftsqlserver&logoColor=white)](sql/01_clean_and_aggregate.sql)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-> End-to-end healthcare analytics project on a **55,500-record patient dataset (2019–2024)**, covering clinical, operational, and financial KPIs. Built with a SQL → Python → Power BI pipeline using window functions, statistical hypothesis testing, and DAX time-intelligence on a star-schema model. Final deliverable is a 4-page interactive Power BI dashboard surfacing **$1.42B in net revenue** across **5 payers, 6 conditions, and 5 age groups**.
-
-![Annual Admissions](charts/01_annual_admissions.png)
+> End-to-end healthcare analytics project on a **55,500-record patient dataset (2019–2024)**, covering clinical, operational, and financial KPIs. Built with a SQL → Python → Power BI pipeline using window functions, statistical hypothesis testing, and DAX time-intelligence on a star-schema model.
+>
+> Final deliverable is a 4-page interactive Power BI dashboard and a live Streamlit web app surfacing **$1.42B in net revenue** across **5 payers, 6 conditions, and 5 age groups**.
 
 ---
 
-## 📊 Project Overview
+## Project Overview
 
 This project answers three executive questions on a 5-year synthetic healthcare dataset:
 
@@ -32,31 +33,37 @@ This project answers three executive questions on a 5-year synthetic healthcare 
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 | Layer | Tool & Version | Key Techniques |
 |-------|----------------|----------------|
-| **Data Extraction** | SQL (T-SQL / MySQL 8.0) | CTEs, window functions (`ROW_NUMBER`, `LAG`), multi-table joins, `GROUP BY`/`HAVING`, date arithmetic |
+| **Data Extraction** | SQL (T-SQL / SQL Server) | CTEs, window functions (`ROW_NUMBER`, `LAG`), multi-table joins, `GROUP BY`/`HAVING`, date arithmetic |
 | **Data Profiling** | Microsoft Excel 365 | PivotTables, Power Query, `XLOOKUP`, `SUMIFS`, conditional formatting, slicers |
 | **Analysis** | Python 3.11 | `pandas`, `NumPy`, `Matplotlib`, `Seaborn`, `SciPy` (chi-square, t-tests, correlation matrices) |
+| **Interactive Dashboard** | Streamlit + Plotly | Live filters, KPI cards, 8 interactive charts, raw data explorer |
 | **Visualization** | Power BI Desktop (latest) | DAX (`CALCULATE`, `SAMEPERIODLASTYEAR`, `SUMX`, `DIVIDE`), star-schema modeling, drill-through, bookmarks, KPI cards |
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 Healthcare-Performance-Review/
-├── README.md                        # You are here
-├── LICENSE                          # MIT
+├── README.md
+├── LICENSE
+├── CONTRIBUTING.md
+├── .gitignore
+├── requirements.txt
 ├── data/
-│   └── healthcare_dataset.csv       # Source data (Kaggle, synthetic)
+│   └── healthcare_dataset.csv        # Download from Kaggle — see Data Source below
 ├── sql/
-│   └── 01_clean_and_aggregate.sql   # Extraction & cleaning queries
+│   └── 01_clean_and_aggregate.sql    # Extraction, cleaning, and 8 aggregation queries
 ├── python/
-│   ├── profile_kaggle.py            # Data validation & profiling
-│   └── generate_charts.py           # Publication-quality PNG generator
-├── charts/                          # 9 publication-quality PNGs (300 DPI)
+│   ├── profile_kaggle.py             # Data validation & profiling
+│   ├── generate_charts.py            # 9 publication-quality PNG charts at 300 DPI
+│   ├── dashboard.py                  # Streamlit interactive dashboard
+│   └── export_dashboard.py           # PDF report builder
+├── charts/                           # 9 publication-quality PNGs (300 DPI)
 │   ├── 01_annual_admissions.png
 │   ├── 02_monthly_trend.png
 │   ├── 03_los_distribution.png
@@ -67,16 +74,44 @@ Healthcare-Performance-Review/
 │   ├── 08_test_results_by_condition.png
 │   └── 09_payer_pareto.png
 ├── powerbi/
-│   ├── healthcare_dashboard.pbix    # 4-page Power BI report
-│   └── dax_measures.md              # All DAX measures documented
-└── docs/
-    ├── methodology.md               # Pipeline & analysis methodology
-    └── key_takeaways.md             # Executive summary of insights
+│   ├── healthcare_dashboard.pbix     # 4-page Power BI report (not tracked — binary/large)
+│   ├── dax_measures.md               # All DAX measures documented
+│   └── screenshots/                  # Dashboard page screenshots
+├── docs/
+│   ├── methodology.md                # Pipeline & analysis methodology
+│   └── key_takeaways.md              # Executive summary of insights
+├── reports/
+│   └── healthcare_dashboard_report.pdf  # Generated locally (gitignored — run export_dashboard.py)
+└── tests/
+    └── test_smoke.py                 # CI smoke tests
 ```
+
+> **Data file:** `data/healthcare_dataset.csv` is not tracked in git.
+> Download it from [Kaggle](https://www.kaggle.com/datasets/prasad22/healthcare-dataset) and place it in `data/` before running any Python scripts.
 
 ---
 
-## 🎯 Key Insights
+## Interactive Streamlit Dashboard
+
+Run a fully interactive version of the dashboard locally — no Power BI required.
+
+```bash
+streamlit run python/dashboard.py
+```
+
+**Features:**
+
+- Sidebar filters: Year, Medical Condition, Insurance Provider, Admission Type
+- 5 KPI cards: Total Admissions, Net Revenue, Avg Billing, Avg LOS, Refund Rate
+- 8 interactive Plotly charts: trend lines, histograms, heatmaps, Pareto chart
+- Raw data explorer (collapsible)
+- All visuals update live when filters change
+
+Screenshots are in [`powerbi/screenshots/`](powerbi/screenshots/).
+
+---
+
+## Key Insights
 
 ### 1. Volume Stabilized at ~11K admissions/year after 2020
 
@@ -110,18 +145,17 @@ No single condition-age combination dominates utilization — clinical resource 
 
 ---
 
-## 🔬 Methodology
+## Methodology
 
 ### Pipeline
 
 ```
 Raw CSV (55,500 rows)
-    ↓ [SQL: clean, deduplicate, aggregate]
-Analytical Dataset
-    ↓ [Python: profile, statistical tests, segment]
-Validated Insights + Charts
-    ↓ [Power BI: model, DAX, visualize]
-Interactive Executive Dashboard
+    └──► [SQL] Clean, deduplicate, aggregate
+         └──► [Python] Profile, statistical tests, segment, generate charts
+              ├──► [Streamlit] Live interactive dashboard (dashboard.py)
+              ├──► [PDF Export] Combined report (export_dashboard.py)
+              └──► [Power BI] Star-schema model, DAX, visualize
 ```
 
 ### Analysis Steps
@@ -130,16 +164,20 @@ Interactive Executive Dashboard
 2. **Cleaning** — Standardized name capitalization, removed 108 records with negative billing for separate refund tracking, capped LOS calculation to non-negative values.
 3. **Statistical Validation** — Ran chi-square tests on condition × age and condition × admission-type cross-tabs to test for non-uniformity.
 4. **Segmentation** — Cohorted patients by age (5 bands), condition (6 categories), and payer (5 providers).
-5. **Visualization** — Generated 9 publication-quality charts in matplotlib/seaborn; built a 4-page Power BI dashboard with DAX time-intelligence measures.
+5. **Visualization** — Generated 9 publication-quality charts in matplotlib/seaborn; built a 4-page Power BI dashboard with DAX time-intelligence measures; built a live Streamlit dashboard with Plotly.
+
+See [`docs/methodology.md`](docs/methodology.md) for full details and [`docs/key_takeaways.md`](docs/key_takeaways.md) for the executive summary.
 
 ---
 
-## 🚀 How to Reproduce
+## How to Reproduce
 
 ### Prerequisites
+
 - Python 3.11+
-- Power BI Desktop (latest)
-- Microsoft Excel 365 (optional, for data profiling)
+- SQL Server (or compatible T-SQL engine) — optional, for the SQL stage
+- Power BI Desktop (latest) — optional, for the .pbix report
+- Dataset downloaded from Kaggle (see link below)
 
 ### Steps
 
@@ -148,22 +186,37 @@ Interactive Executive Dashboard
 git clone https://github.com/SMARTEND/Healthcare-Performance-Review.git
 cd Healthcare-Performance-Review
 
-# 2. Install Python dependencies
-pip install pandas numpy matplotlib seaborn scipy
+# 2. Download the dataset from Kaggle (link in Data Source section below)
+#    Place healthcare_dataset.csv in the data/ folder.
 
-# 3. Profile the dataset
+# 3. Install Python dependencies
+pip install -r requirements.txt
+
+# 4. (Optional) Run the SQL queries
+#    Open sql/01_clean_and_aggregate.sql in SSMS, point it to your SQL Server
+#    instance, and execute. The script expects the raw CSV imported into
+#    a table named [dbo].[healthcare_dataset].
+
+# 5. Profile the dataset
 python python/profile_kaggle.py
 
-# 4. Generate all charts
+# 6. Generate all 9 charts
 python python/generate_charts.py
 
-# 5. Open the Power BI dashboard
-# Open powerbi/healthcare_dashboard.pbix in Power BI Desktop
+# 7. Launch the Streamlit dashboard
+streamlit run python/dashboard.py
+
+# 8. (Optional) Export a PDF report of all charts
+python python/export_dashboard.py
+#    Output: reports/healthcare_dashboard_report.pdf
+
+# 9. (Optional) Open the Power BI dashboard
+#    Open powerbi/healthcare_dashboard.pbix in Power BI Desktop
 ```
 
 ---
 
-## 📈 Sample DAX Measures
+## Sample DAX Measures
 
 Drop-in measures used in the Power BI dashboard. See [`powerbi/dax_measures.md`](powerbi/dax_measures.md) for the full list.
 
@@ -175,6 +228,7 @@ Net Revenue = SUM ( Patients[Billing Amount] )
 Average Billing per Patient =
 DIVIDE ( [Net Revenue], [Total Admissions], 0 )
 
+-- Ratio of refunded amounts to gross positive billing
 Refund Rate % =
 DIVIDE (
     ABS ( CALCULATE ( SUM ( Patients[Billing Amount] ),
@@ -195,15 +249,13 @@ DIVIDE (
 
 ---
 
-## 📊 Live Dashboard
+## Dashboard Preview
 
-> Power BI online link: *(add your published dashboard URL here)*
-
-Screenshots of the 4 dashboard pages are available in [`powerbi/screenshots/`](powerbi/screenshots/).
+Screenshots of all 4 dashboard pages are in [`powerbi/screenshots/`](powerbi/screenshots/).
 
 ---
 
-## ⚠️ Data Source & Disclaimer
+## Data Source & Disclaimer
 
 **Source:** [Kaggle Healthcare Dataset by Prasad Patil](https://www.kaggle.com/datasets/prasad22/healthcare-dataset)
 
@@ -213,16 +265,17 @@ This dataset is **synthetic** — generated for learning and portfolio purposes.
 
 ---
 
-## 👤 Author
+## Author
 
 **Mohammad Alshehri**
 
-- 📧 Email: mokha9999@hotmail.com
-- 🔗 GitHub: [@SMARTEND](https://github.com/SMARTEND)
-- 📍 Saudi Arabia
+- Email: mokha9999@hotmail.com
+- GitHub: [@SMARTEND](https://github.com/SMARTEND)
+- LinkedIn: [linkedin.com/in/YOUR-PROFILE](https://linkedin.com/in/YOUR-PROFILE)
+- Location: Saudi Arabia
 
 ---
 
-## 📄 License
+## License
 
 MIT License — see [LICENSE](LICENSE) for details.

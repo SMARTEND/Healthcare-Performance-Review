@@ -19,13 +19,34 @@ SRC = os.path.join(os.path.dirname(__file__), "..", "data", "healthcare_dataset.
 OUT_DIR = os.path.join(os.path.dirname(__file__), "..", "charts")
 os.makedirs(OUT_DIR, exist_ok=True)
 
-# Dashboard-aligned blue palette
-BLUE_DARK = "#1F4E79"
-BLUE_MID = "#2E75B6"
-BLUE_LIGHT = "#9DC3E6"
-ACCENT_RED = "#C00000"
+# Core palette
+BLUE_DARK   = "#1F4E79"
+BLUE_MID    = "#2E75B6"
+BLUE_LIGHT  = "#9DC3E6"
+ACCENT_RED  = "#C00000"
 ACCENT_AMBER = "#ED7D31"
-GRAY = "#7F7F7F"
+GRAY        = "#7F7F7F"
+
+# Categorical palette — distinct professional colors for bars/segments
+PALETTE_CAT = ["#2E75B6", "#ED7D31", "#70AD47", "#7030A0", "#C00000", "#00B0F0"]
+
+# Age-group colors (5 bands)
+AGE_COLORS = {
+    "18–34": "#2E75B6",
+    "35–49": "#ED7D31",
+    "50–64": "#70AD47",
+    "65–79": "#7030A0",
+    "80+":   "#C00000",
+}
+
+# Insurance-provider colors (5 payers)
+INS_COLORS = {
+    "Aetna":            "#2E75B6",
+    "Blue Cross":       "#ED7D31",
+    "Cigna":            "#70AD47",
+    "Medicare":         "#7030A0",
+    "UnitedHealthcare": "#C00000",
+}
 
 PALETTE_BLUE = [BLUE_DARK, BLUE_MID, BLUE_LIGHT, "#5B9BD5", "#BDD7EE", "#DEEBF7"]
 
@@ -79,12 +100,12 @@ print()
 print("Generating charts...")
 yearly = df.groupby("Year").size().reset_index(name="Admissions")
 
+year_colors = [BLUE_LIGHT if i in (0, len(yearly) - 1) else c
+               for i, c in enumerate(PALETTE_CAT[:len(yearly)])]
+
 fig, ax = plt.subplots(figsize=(10, 5.5))
 bars = ax.bar(yearly["Year"].astype(str), yearly["Admissions"],
-              color=BLUE_MID, edgecolor=BLUE_DARK, linewidth=1.2)
-# Highlight partial years
-bars[0].set_color(BLUE_LIGHT)
-bars[-1].set_color(BLUE_LIGHT)
+              color=year_colors, edgecolor=BLUE_DARK, linewidth=1.2)
 
 for bar, val in zip(bars, yearly["Admissions"]):
     ax.text(bar.get_x() + bar.get_width()/2, val + 150,
@@ -152,10 +173,9 @@ age_counts = df["Age Group"].value_counts().reindex(
     ["18–34", "35–49", "50–64", "65–79", "80+"])
 
 fig, ax = plt.subplots(figsize=(10, 5.5))
-colors = [BLUE_DARK if i == age_counts.idxmax() else BLUE_MID
-          for i in age_counts.index]
+colors = [AGE_COLORS.get(g, BLUE_MID) for g in age_counts.index]
 bars = ax.bar(age_counts.index, age_counts.values,
-              color=colors, edgecolor="white", linewidth=1.2)
+              color=colors, edgecolor="white", linewidth=1.5)
 
 for bar, val in zip(bars, age_counts.values):
     pct = val / age_counts.sum() * 100
@@ -176,10 +196,9 @@ save(fig, "04_age_groups.png")
 ins_revenue = df.groupby("Insurance Provider")["Billing Amount"].sum().sort_values(ascending=True)
 
 fig, ax = plt.subplots(figsize=(10, 5.5))
-colors = [BLUE_DARK if i == len(ins_revenue) - 1 else BLUE_MID
-          for i in range(len(ins_revenue))]
+colors = [INS_COLORS.get(p, BLUE_MID) for p in ins_revenue.index]
 bars = ax.barh(ins_revenue.index, ins_revenue.values / 1e6,
-               color=colors, edgecolor="white", linewidth=1.2)
+               color=colors, edgecolor="white", linewidth=1.5)
 
 for bar, val in zip(bars, ins_revenue.values / 1e6):
     ax.text(val + 2, bar.get_y() + bar.get_height()/2,
@@ -211,12 +230,13 @@ save(fig, "06_condition_age_heatmap.png")
 # ----------------------------------------------------------------------
 adm = df["Admission Type"].value_counts()
 
+ADM_COLORS = ["#2E75B6", "#ED7D31", "#70AD47"]
+
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5.5))
 
 # Donut
-colors_donut = [BLUE_DARK, BLUE_MID, BLUE_LIGHT]
 wedges, texts, autotexts = ax1.pie(adm.values, labels=adm.index,
-                                    colors=colors_donut, autopct="%1.1f%%",
+                                    colors=ADM_COLORS, autopct="%1.1f%%",
                                     startangle=90, pctdistance=0.78,
                                     wedgeprops=dict(width=0.4, edgecolor="white"))
 for at in autotexts:
@@ -227,7 +247,7 @@ ax1.set_title("Share by Admission Type", pad=15)
 # Bar with avg billing
 billing_by_type = df.groupby("Admission Type")["Billing Amount"].mean().reindex(adm.index)
 bars = ax2.bar(billing_by_type.index, billing_by_type.values,
-               color=colors_donut, edgecolor="white", linewidth=1.2)
+               color=ADM_COLORS, edgecolor="white", linewidth=1.5)
 for bar, val in zip(bars, billing_by_type.values):
     ax2.text(bar.get_x() + bar.get_width()/2, val + 200,
              f"${val:,.0f}", ha="center", fontsize=10, fontweight="bold")
@@ -268,9 +288,11 @@ save(fig, "08_test_results_by_condition.png")
 ins_sorted = df.groupby("Insurance Provider")["Billing Amount"].sum().sort_values(ascending=False)
 cumpct = (ins_sorted.cumsum() / ins_sorted.sum() * 100)
 
+pareto_colors = [INS_COLORS.get(p, BLUE_MID) for p in ins_sorted.index]
+
 fig, ax1 = plt.subplots(figsize=(10, 5.5))
 bars = ax1.bar(ins_sorted.index, ins_sorted.values / 1e6,
-               color=BLUE_MID, edgecolor=BLUE_DARK, linewidth=1.2)
+               color=pareto_colors, edgecolor="white", linewidth=1.5)
 ax1.set_ylabel("Revenue ($M)", color=BLUE_DARK)
 ax1.tick_params(axis="y", labelcolor=BLUE_DARK)
 
