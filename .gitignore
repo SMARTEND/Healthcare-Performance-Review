@@ -58,6 +58,9 @@ dist/
 secrets.json
 config.local.json
 
+# ----- Generated reports -----
+reports/
+
 # ----- Large local extracts (uncomment if needed) -----
 # data/raw/
 # data/large_exports/
