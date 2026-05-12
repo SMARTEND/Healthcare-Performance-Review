@@ -15,8 +15,8 @@ from matplotlib.ticker import FuncFormatter
 # ----------------------------------------------------------------------
 # Configuration
 # ----------------------------------------------------------------------
-SRC = r"C:\Users\alshe\Downloads\healthcare_dataset.csv"
-OUT_DIR = r"C:\Users\alshe\Downloads\charts"
+SRC = os.path.join(os.path.dirname(__file__), "..", "data", "healthcare_dataset.csv")
+OUT_DIR = os.path.join(os.path.dirname(__file__), "..", "charts")
 os.makedirs(OUT_DIR, exist_ok=True)
 
 # Dashboard-aligned blue palette

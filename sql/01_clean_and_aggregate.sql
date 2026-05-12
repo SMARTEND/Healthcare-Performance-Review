@@ -43,7 +43,7 @@ CREATE TABLE dbo.stg_Patients (
 
 -- Bulk load from the CSV. Adjust path to your environment.
 BULK INSERT dbo.stg_Patients
-FROM 'C:\Users\alshe\Downloads\healthcare_dataset.csv'
+FROM '<project_root>\data\healthcare_dataset.csv'   -- update path to your environment
 WITH (
     FIRSTROW       = 2,
     FIELDTERMINATOR = ',',

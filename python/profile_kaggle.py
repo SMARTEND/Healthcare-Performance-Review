@@ -1,9 +1,10 @@
 import csv
+import os
 from collections import Counter, defaultdict
 from datetime import datetime
 from statistics import mean, median, stdev
 
-PATH = r"C:\Users\alshe\Downloads\healthcare_dataset.csv"
+PATH = os.path.join(os.path.dirname(__file__), "..", "data", "healthcare_dataset.csv")
 
 rows = []
 with open(PATH, "r", encoding="utf-8", errors="ignore") as f:
