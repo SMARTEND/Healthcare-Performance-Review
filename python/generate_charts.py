@@ -2,7 +2,7 @@
 Healthcare Analytics Project — Chart Generator
 Generates publication-quality PNG charts from the Kaggle Healthcare Dataset.
 
-Output: ./charts/  (8 PNGs at 300 DPI)
+Output: ./charts/  (12 PNGs at 300 DPI)
 """
 
 import os
@@ -312,6 +312,73 @@ for x, y in zip(range(len(cumpct)), cumpct.values):
 ax1.set_title("Pareto: Revenue Concentration by Payer — Highly Distributed", pad=15)
 add_footer(fig)
 save(fig, "09_payer_pareto.png")
+
+# ----------------------------------------------------------------------
+# Chart 10 — Revenue Efficiency: Avg Billing per LOS Day by Condition
+# ----------------------------------------------------------------------
+df_eff = df[(df["Billing Amount"] > 0) & (df["LOS Days"] > 0)].copy()
+df_eff["Rev per Day"] = df_eff["Billing Amount"] / df_eff["LOS Days"]
+eff = (df_eff.groupby("Medical Condition")["Rev per Day"]
+       .mean().sort_values(ascending=True).reset_index())
+eff.columns = ["Medical Condition", "Avg Rev/Day"]
+
+fig, ax = plt.subplots(figsize=(10, 5.5))
+colors_eff = [PALETTE_CAT[i] for i in range(len(eff))]
+bars = ax.barh(eff["Medical Condition"], eff["Avg Rev/Day"],
+               color=colors_eff, edgecolor="white", linewidth=1.5)
+for bar, val in zip(bars, eff["Avg Rev/Day"]):
+    ax.text(val + 15, bar.get_y() + bar.get_height() / 2,
+            f"${val:,.0f}/day", va="center", fontsize=10, fontweight="bold")
+ax.set_title("Revenue Efficiency: Avg Billing per LOS Day by Condition", pad=15)
+ax.set_xlabel("Avg Revenue per Day ($)")
+ax.set_xlim(0, eff["Avg Rev/Day"].max() * 1.22)
+add_footer(fig)
+save(fig, "10_revenue_efficiency.png")
+
+# ----------------------------------------------------------------------
+# Chart 11 — Scatter: LOS Days vs Billing Amount (sample n=3,000)
+# ----------------------------------------------------------------------
+sample = df[df["Billing Amount"] > 0].sample(n=min(3000, len(df)), random_state=42)
+cond_list  = sorted(sample["Medical Condition"].unique())
+cond_color = {c: PALETTE_CAT[i % len(PALETTE_CAT)] for i, c in enumerate(cond_list)}
+
+fig, ax = plt.subplots(figsize=(11, 6))
+for cond, grp in sample.groupby("Medical Condition"):
+    ax.scatter(grp["LOS Days"], grp["Billing Amount"] / 1000,
+               color=cond_color[cond], alpha=0.40, s=14, label=cond)
+
+m, b = np.polyfit(sample["LOS Days"], sample["Billing Amount"] / 1000, 1)
+x_line = np.array([sample["LOS Days"].min(), sample["LOS Days"].max()])
+ax.plot(x_line, m * x_line + b, color=ACCENT_RED, linewidth=2,
+        linestyle="--", label="Trend line")
+
+ax.set_title("LOS Days vs Billing Amount — Sample of 3,000 Patients", pad=15)
+ax.set_xlabel("Length of Stay (days)")
+ax.set_ylabel("Billing Amount ($K)")
+ax.legend(loc="upper left", fontsize=9, framealpha=0.85, ncol=2)
+add_footer(fig)
+save(fig, "11_los_vs_billing_scatter.png")
+
+# ----------------------------------------------------------------------
+# Chart 12 — Medication Distribution
+# ----------------------------------------------------------------------
+meds = df["Medication"].value_counts().reset_index()
+meds.columns = ["Medication", "Count"]
+meds_sorted = meds.sort_values("Count", ascending=True)
+
+fig, ax = plt.subplots(figsize=(10, 5.5))
+colors_med = [PALETTE_CAT[i % len(PALETTE_CAT)] for i in range(len(meds_sorted))]
+bars = ax.barh(meds_sorted["Medication"], meds_sorted["Count"],
+               color=colors_med, edgecolor="white", linewidth=1.5)
+for bar, val in zip(bars, meds_sorted["Count"]):
+    pct = val / len(df) * 100
+    ax.text(val + 50, bar.get_y() + bar.get_height() / 2,
+            f"{val:,}  ({pct:.1f}%)", va="center", fontsize=10, fontweight="bold")
+ax.set_title("Medication Distribution — Near-Equal Prescription Mix", pad=15)
+ax.set_xlabel("Patients")
+ax.set_xlim(0, meds_sorted["Count"].max() * 1.22)
+add_footer(fig)
+save(fig, "12_medication_distribution.png")
 
 # ----------------------------------------------------------------------
 # Done

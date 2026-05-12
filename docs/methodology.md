@@ -56,11 +56,14 @@ Raw CSV (55,500 rows, 15 columns)
 - Distribution analysis for categorical fields (medical condition, gender, blood type, etc.)
 - Outlier detection on billing amounts (negative values flagged)
 
-### Statistical Tests
+### Statistical Tests (`python/analysis.py`)
 
-- **Chi-square test of independence** on condition × admission type cross-tabs (no significant association found — confirms uniform synthetic distribution)
-- **Two-proportion z-test** on subsegment differences (e.g., test result rates by condition)
-- **Correlation analysis** between age, LOS, and billing
+- **Chi-square test of independence** — Condition × Age Group and Condition × Admission Type cross-tabs
+- **One-way ANOVA** — LOS Days and Billing Amount across the 6 medical conditions
+- **Pearson correlation** — Age, LOS Days, and Billing Amount pairwise
+- **Revenue efficiency** — Avg billing per LOS day segmented by condition and age group
+
+Run with: `python python/analysis.py`
 
 ### Segmentation
 
@@ -71,11 +74,14 @@ Raw CSV (55,500 rows, 15 columns)
 
 ### Visualization
 
-- Generated 9 PNG charts at 300 DPI using consistent dashboard-aligned blue palette
-- Each chart paired with insight-driven title (not just topic title)
-- All charts include source-disclosure footer
+- Generated 12 PNG charts at 300 DPI using consistent dashboard-aligned blue palette
+- Charts 1–9: operations, clinical, financial KPIs
+- Chart 10: Revenue efficiency (avg billing per LOS day by condition)
+- Chart 11: Scatter — LOS days vs billing amount (sample n=3,000 with trend line)
+- Chart 12: Medication distribution
+- Each chart paired with insight-driven title; all include source-disclosure footer
 
-**Output:** 9 publication-ready charts in `charts/`.
+**Output:** 12 publication-ready charts in `charts/`.
 
 ---
 

@@ -108,13 +108,40 @@ st.sidebar.caption(
     "55,500 records · May 2019 – May 2024"
 )
 
+# -----------------------------------------------------------------------
+# YoY reference — 2023 vs 2022 (last two full years), non-year filters
+# -----------------------------------------------------------------------
+_nm = (
+    df_full["Medical Condition"].isin(sel_conditions) &
+    df_full["Insurance Provider"].isin(sel_insurers) &
+    df_full["Admission Type"].isin(sel_adm)
+)
+_df23 = df_full[_nm & (df_full["Year"] == 2023)]
+_df22 = df_full[_nm & (df_full["Year"] == 2022)]
+_has_yoy = len(_df23) > 0 and len(_df22) > 0
+
+
+def _yoy(cur, prior):
+    if not _has_yoy or prior == 0:
+        return None
+    return f"{(cur - prior) / abs(prior) * 100:+.1f}% vs 2022"
+
+
+def _section(title):
+    st.markdown(
+        f"<div style='background:{BLUE_DARK};color:white;padding:8px 16px;"
+        f"border-radius:6px;margin:20px 0 8px;font-weight:600;font-size:14px'>"
+        f"{title}</div>",
+        unsafe_allow_html=True,
+    )
+
 # ----------------------------------------------------------------------
 # Header
 # ----------------------------------------------------------------------
 st.markdown(
     f"""
     <div style='background:{BLUE_DARK};padding:20px 28px;border-radius:8px;margin-bottom:16px'>
-        <h2 style='color:white;margin:0'>🏥 Healthcare Performance Review</h2>
+        <h2 style='color:white;margin:0'>Healthcare Performance Review</h2>
         <p style='color:{BLUE_LIGHT};margin:4px 0 0'>
             Interactive Analytics Dashboard &nbsp;·&nbsp;
             Showing <b style='color:white'>{len(df):,}</b> of {len(df_full):,} records
@@ -124,13 +151,36 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ----------------------------------------------------------------------
-# KPI cards
-# ----------------------------------------------------------------------
-k1, k2, k3, k4, k5 = st.columns(5)
+_csv = df.to_csv(index=False).encode("utf-8")
+st.download_button(
+    "Download filtered data (.csv)", _csv,
+    "healthcare_filtered.csv", "text/csv",
+)
 
-def kpi(col, label, value, delta=None):
-    col.metric(label, value, delta)
+# ----------------------------------------------------------------------
+# KPI section — 2 metric cards (with YoY delta) + 3 gauge charts
+# ----------------------------------------------------------------------
+def _gauge(title, value, lo, hi, sfx=""):
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=value,
+        title={"text": title, "font": {"size": 13}},
+        number={"suffix": sfx, "font": {"size": 20, "color": BLUE_DARK}},
+        gauge={
+            "axis": {"range": [lo, hi], "tickwidth": 1, "tickcolor": GRAY},
+            "bar":  {"color": BLUE_MID, "thickness": 0.28},
+            "bgcolor": "white",
+            "steps": [
+                {"range": [lo, lo + (hi - lo) * 0.5],                   "color": "#EBF3FB"},
+                {"range": [lo + (hi - lo) * 0.5, lo + (hi - lo) * 0.75], "color": "#C5DCF0"},
+                {"range": [lo + (hi - lo) * 0.75, hi],                   "color": "#9DC3E6"},
+            ],
+        },
+    ))
+    fig.update_layout(height=200, margin=dict(t=50, b=0, l=20, r=20),
+                      paper_bgcolor="white")
+    return fig
+
 
 total_adm   = len(df)
 net_rev     = df["Billing Amount"].sum()
@@ -138,17 +188,24 @@ avg_billing = df["Billing Amount"].mean()
 avg_los     = df["LOS Days"].mean()
 refund_pct  = (df["Billing Amount"] < 0).mean() * 100
 
-kpi(k1, "Total Admissions",    f"{total_adm:,}")
-kpi(k2, "Net Revenue",         f"${net_rev/1e6:.2f}M")
-kpi(k3, "Avg Billing/Patient", f"${avg_billing:,.0f}")
-kpi(k4, "Avg Length of Stay",  f"{avg_los:.1f} days")
-kpi(k5, "Refund Rate",         f"{refund_pct:.1f}%")
+p_adm    = len(_df22)                                    if _has_yoy else 0
+p_rev    = _df22["Billing Amount"].sum()                 if _has_yoy else 0
+p_los    = _df22["LOS Days"].mean()                      if _has_yoy else 0
+p_refund = (_df22["Billing Amount"] < 0).mean() * 100    if _has_yoy else 0
+
+mc1, mc2, gc1, gc2, gc3 = st.columns([1.3, 1.3, 1, 1, 1])
+mc1.metric("Total Admissions", f"{total_adm:,}",         _yoy(total_adm, p_adm))
+mc2.metric("Net Revenue",      f"${net_rev/1e6:.2f}M",   _yoy(net_rev,   p_rev))
+gc1.plotly_chart(_gauge("Avg LOS",     avg_los,            0, 30, " days"), use_container_width=True)
+gc2.plotly_chart(_gauge("Avg Billing", avg_billing / 1000, 0, 50, "K"),     use_container_width=True)
+gc3.plotly_chart(_gauge("Refund Rate", refund_pct,          0,  1, "%"),     use_container_width=True)
 
 st.markdown("---")
 
 # ----------------------------------------------------------------------
 # Row 1 — Admissions trend  |  Monthly trend
 # ----------------------------------------------------------------------
+_section("Operations — Volume & Throughput")
 col1, col2 = st.columns(2)
 
 with col1:
@@ -185,6 +242,7 @@ with col2:
 # ----------------------------------------------------------------------
 # Row 2 — LOS distribution  |  Age groups
 # ----------------------------------------------------------------------
+_section("Clinical — Length of Stay & Demographics")
 col3, col4 = st.columns(2)
 
 with col3:
@@ -222,6 +280,7 @@ with col4:
 # ----------------------------------------------------------------------
 # Row 3 — Insurance revenue  |  Admission type
 # ----------------------------------------------------------------------
+_section("Financial — Revenue & Payer Mix")
 col5, col6 = st.columns(2)
 
 with col5:
@@ -260,6 +319,7 @@ with col6:
 # ----------------------------------------------------------------------
 # Row 4 — Condition × Age heatmap  (full width)
 # ----------------------------------------------------------------------
+_section("Clinical Mix — Condition × Age Group Volume")
 st.subheader("Patient Volume by Medical Condition × Age Group")
 ct = pd.crosstab(df["Medical Condition"], df["Age Group"])
 fig = px.imshow(
@@ -274,6 +334,7 @@ st.plotly_chart(fig, use_container_width=True)
 # ----------------------------------------------------------------------
 # Row 5 — Test results stacked bar  |  Pareto
 # ----------------------------------------------------------------------
+_section("Patient Outcomes & Revenue Concentration")
 col7, col8 = st.columns(2)
 
 with col7:
@@ -336,6 +397,78 @@ with col8:
         legend=dict(orientation="h", y=-0.2),
         margin=dict(t=20, b=20),
     )
+    st.plotly_chart(fig, use_container_width=True)
+
+# ----------------------------------------------------------------------
+# Row 6 — Revenue efficiency  |  LOS vs Billing scatter
+# ----------------------------------------------------------------------
+_section("Advanced Analysis — Efficiency & Correlation")
+col9, col10 = st.columns(2)
+
+with col9:
+    st.subheader("Revenue Efficiency by Condition ($/LOS Day)")
+    _eff = df[(df["Billing Amount"] > 0) & (df["LOS Days"] > 0)].copy()
+    _eff["Rev/Day"] = _eff["Billing Amount"] / _eff["LOS Days"]
+    eff_cond = (_eff.groupby("Medical Condition")["Rev/Day"]
+                .mean().sort_values().reset_index())
+    eff_cond.columns = ["Medical Condition", "Avg Rev/Day"]
+    fig = px.bar(eff_cond, x="Avg Rev/Day", y="Medical Condition",
+                 orientation="h", text="Avg Rev/Day",
+                 color="Medical Condition",
+                 color_discrete_sequence=PALETTE_CAT)
+    fig.update_traces(texttemplate="$%{text:,.0f}", textposition="outside")
+    fig.update_layout(showlegend=False, margin=dict(t=20, b=20))
+    st.plotly_chart(fig, use_container_width=True)
+
+with col10:
+    st.subheader("LOS Days vs Billing Amount")
+    _pool = df[df["Billing Amount"] > 0]
+    _samp = _pool.sample(n=min(2000, len(_pool)), random_state=42)
+    fig = px.scatter(
+        _samp, x="LOS Days", y="Billing Amount",
+        color="Medical Condition",
+        color_discrete_sequence=PALETTE_CAT,
+        opacity=0.45,
+        labels={"Billing Amount": "Billing ($)", "LOS Days": "LOS (days)"},
+    )
+    _m, _b = np.polyfit(_samp["LOS Days"], _samp["Billing Amount"], 1)
+    _x = np.linspace(_samp["LOS Days"].min(), _samp["LOS Days"].max(), 100)
+    fig.add_scatter(x=_x, y=_m * _x + _b, mode="lines",
+                    line=dict(color=ACCENT_RED, width=2, dash="dash"),
+                    name="Trend", showlegend=True)
+    fig.update_layout(margin=dict(t=20, b=20))
+    st.plotly_chart(fig, use_container_width=True)
+
+# ----------------------------------------------------------------------
+# Row 7 — Medication distribution  |  Top 10 hospitals
+# ----------------------------------------------------------------------
+_section("Operations — Medications & Hospital Volume")
+col11, col12 = st.columns(2)
+
+with col11:
+    st.subheader("Medication Distribution")
+    med_ct = df["Medication"].value_counts().reset_index()
+    med_ct.columns = ["Medication", "Count"]
+    fig = px.bar(
+        med_ct.sort_values("Count"), x="Count", y="Medication",
+        orientation="h", text="Count",
+        color="Medication", color_discrete_sequence=PALETTE_CAT,
+    )
+    fig.update_traces(texttemplate="%{text:,}", textposition="outside")
+    fig.update_layout(showlegend=False, margin=dict(t=20, b=20))
+    st.plotly_chart(fig, use_container_width=True)
+
+with col12:
+    st.subheader("Top 10 Hospitals by Patient Volume")
+    top_h = df["Hospital"].value_counts().head(10).reset_index()
+    top_h.columns = ["Hospital", "Patients"]
+    fig = px.bar(
+        top_h.sort_values("Patients"), x="Patients", y="Hospital",
+        orientation="h", text="Patients",
+        color_discrete_sequence=[BLUE_MID],
+    )
+    fig.update_traces(texttemplate="%{text:,}", textposition="outside")
+    fig.update_layout(showlegend=False, margin=dict(t=20, b=20))
     st.plotly_chart(fig, use_container_width=True)
 
 # ----------------------------------------------------------------------
